@@ -4,10 +4,10 @@ COPY = objcopy
 DUMP = objdump
 
 all: forth
-	@$(COPY) -j.text -j.data -O binary $< $<.bin
+	@$(COPY) -j.text -j.rodata -j.data -O binary $< $<.bin
 	@chmod -x $<.bin
 	@$(DUMP) -S $< > list.txt
-	@$(DUMP) -h -j.text -j.data $<
+	@$(DUMP) -h -j.text -j.rodata -j.data $<
 
 forth: forth.o
 	$(LD) $< -o $@
