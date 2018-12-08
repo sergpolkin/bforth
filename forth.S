@@ -11,13 +11,19 @@ msg_bye:
 	msg_bye_len = . - msg_bye
 msg:
 	.ascii "Hello, world!\n"
-	len = . - msg
+	msg_len = . - msg
 
 .section .data
 bcmd:
-	.quad bcmd_bad, bcmd_bye, bcmd_bad, bcmd_bad, bcmd_bad, bcmd_bad, bcmd_bad, bcmd_bad
+	.quad bcmd_bad, bcmd_bye, bcmd_type, bcmd_bad, bcmd_bad, bcmd_bad, bcmd_bad, bcmd_bad
+	.quad bcmd_lit8, bcmd_lit16, bcmd_lit32, bcmd_lit64, bcmd_bad, bcmd_bad, bcmd_bad, bcmd_bad
 
 prog_start:
+	.byte b_lit64
+	.quad msg
+	.byte b_lit8
+	.byte msg_len
+	.byte b_type
 	.byte b_bye
 	.byte b_bad
 
@@ -58,3 +64,41 @@ bcmd_bye:
 	xor rdi, rdi
 	mov rax, 60
 	syscall
+
+b_type = 0x02
+bcmd_type:
+	pop rdx
+	pop rsi
+	mov rdi, 1
+	mov rax, 1
+	syscall
+	jmp _next
+
+b_lit8 = 0x08
+bcmd_lit8:
+	movsx rax, byte ptr [r8]
+	inc r8
+	push rax
+	jmp _next
+
+b_lit16 = 0x09
+bcmd_lit16:
+	movsx rax, word ptr [r8]
+	inc r8
+	inc r8
+	push rax
+	jmp _next
+
+b_lit32 = 0x0A
+bcmd_lit32:
+	movsx rax, dword ptr [r8]
+	add r8, 4
+	push rax
+	jmp _next
+
+b_lit64 = 0x0B
+bcmd_lit64:
+	mov rax, [r8]
+	add r8, 8
+	push rax
+	jmp _next
