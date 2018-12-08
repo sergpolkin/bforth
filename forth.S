@@ -15,23 +15,31 @@ msg:
 
 .section .data
 bcmd:
-	.quad bcmd_bad,     bcmd_bye,      bcmd_type,     0,              0, 0, 0, 0
-	.quad bcmd_lit8,    bcmd_lit16,    bcmd_lit32,    bcmd_lit64,     0, 0, 0, 0
-	.quad bcmd_branch8, bcmd_branch16, bcmd_qbranch8, bcmd_qbranch16, 0, 0, 0, 0
-	.quad bcmd_dup,     0,             0,             0,              0, 0, 0, 0
-	.quad bcmd_wm,      0,             0,             0,              0, 0, 0, 0
+# 0x00
+	.quad bcmd_bad,     bcmd_bye,      bcmd_type,     0
+	.quad 0,            0,             0,             0
+	.quad bcmd_lit8,    bcmd_lit16,    bcmd_lit32,    bcmd_lit64
+	.quad bcmd_call8,   bcmd_call16,   bcmd_call32,   0
+# 0x10
+	.quad bcmd_branch8, bcmd_branch16, bcmd_qbranch8, bcmd_qbranch16
+	.quad 0,            0,             0,             bcmd_exit
+	.quad bcmd_dup,     0,             0,             0
+	.quad 0,            0,             0,             0
+# 0x20
+	.quad bcmd_wm,      0,             0,             0
 _fill_len = 256 - (. - bcmd) / 8
 	.fill _fill_len, 8, 0
 
 prog_start:
 	.byte b_lit8
-	.byte 10
+	.byte 3
+
 m0:
-	.byte b_lit64
-	.quad msg
-	.byte b_lit8
-	.byte msg_len
-	.byte b_type
+	.byte b_call32
+	.int  sub_hello - . - 4
+
+	.byte b_call16
+	.word sub_hello - . - 2
 
 	.byte b_wm
 	.byte b_dup
@@ -40,6 +48,14 @@ m0:
 
 	.byte b_bye
 	.byte b_bad
+
+sub_hello:
+	.byte b_lit64
+	.quad msg
+	.byte b_lit8
+	.byte msg_len
+	.byte b_type
+	.byte b_exit
 
 .section .text
 .global _start
@@ -115,6 +131,40 @@ bcmd_lit64:
 	mov rax, [r8]
 	add r8, 8
 	push rax
+	jmp _next
+
+b_call8 = 0x0C
+bcmd_call8:
+	movsx rax, byte ptr [r8]
+	sub rbp, 8
+	inc r8
+	mov [rbp], r8
+	add r8, rax
+	jmp _next
+
+b_call16 = 0x0D
+bcmd_call16:
+	movsx rax, word ptr [r8]
+	sub rbp, 8
+	inc r8
+	inc r8
+	mov [rbp], r8
+	add r8, rax
+	jmp _next
+
+b_call32 = 0x0E
+bcmd_call32:
+	movsx rax, dword ptr [r8]
+	sub rbp, 8
+	add r8, 4
+	mov [rbp], r8
+	add r8, rax
+	jmp _next
+
+b_exit = 0x17
+bcmd_exit:
+	mov r8, [rbp]
+	add rbp, 8
 	jmp _next
 
 b_branch8 = 0x10
