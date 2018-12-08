@@ -15,15 +15,29 @@ msg:
 
 .section .data
 bcmd:
-	.quad bcmd_bad, bcmd_bye, bcmd_type, bcmd_bad, bcmd_bad, bcmd_bad, bcmd_bad, bcmd_bad
-	.quad bcmd_lit8, bcmd_lit16, bcmd_lit32, bcmd_lit64, bcmd_bad, bcmd_bad, bcmd_bad, bcmd_bad
+	.quad bcmd_bad,     bcmd_bye,      bcmd_type,     0,              0, 0, 0, 0
+	.quad bcmd_lit8,    bcmd_lit16,    bcmd_lit32,    bcmd_lit64,     0, 0, 0, 0
+	.quad bcmd_branch8, bcmd_branch16, bcmd_qbranch8, bcmd_qbranch16, 0, 0, 0, 0
+	.quad bcmd_dup,     0,             0,             0,              0, 0, 0, 0
+	.quad bcmd_wm,      0,             0,             0,              0, 0, 0, 0
+_fill_len = 256 - (. - bcmd) / 8
+	.fill _fill_len, 8, 0
 
 prog_start:
+	.byte b_lit8
+	.byte 10
+m0:
 	.byte b_lit64
 	.quad msg
 	.byte b_lit8
 	.byte msg_len
 	.byte b_type
+
+	.byte b_wm
+	.byte b_dup
+	.byte b_qbranch8
+	.byte m0 - .
+
 	.byte b_bye
 	.byte b_bad
 
@@ -101,4 +115,43 @@ bcmd_lit64:
 	mov rax, [r8]
 	add r8, 8
 	push rax
+	jmp _next
+
+b_branch8 = 0x10
+bcmd_branch8:
+	movsx rax, byte ptr [r8]
+	add r8, rax
+	jmp _next
+
+b_branch16 = 0x11
+bcmd_branch16:
+	movsx rax, word ptr [r8]
+	add r8, rax
+	jmp _next
+
+b_qbranch8 = 0x12
+bcmd_qbranch8:
+	pop rax
+	or rax, rax
+	jnz bcmd_branch8
+	inc r8
+	jmp _next
+
+b_qbranch16 = 0x13
+bcmd_qbranch16:
+	pop rax
+	or rax, rax
+	jnz bcmd_branch16
+	inc r8
+	inc r8
+	jmp _next
+
+b_dup = 0x18
+bcmd_dup:
+	push [rsp]
+	jmp _next
+
+b_wm = 0x20
+bcmd_wm:
+	decq [rsp]
 	jmp _next
